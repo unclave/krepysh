@@ -1,0 +1,216 @@
+Qt/C++ - Урок 002. QSystemTrayIcon или Как свернуть приложение в трей?
+QSystemTrayIcon, Tray, qt, трей
+
+Аналогичная статья на PyQt5/Python
+
+Сегодня обсудим то, каким образом сворачивать приложение, написанное на фреймворке Qt, в трей операционной системы с помощью класса QSystemTrayIcon. Данная функция является весьма полезной для приложений, которые должны выполняться в фоновом режиме длительное время. Например, приложение видеозаписи или аудио воспроизведения.
+
+Поэтому займёмся следующими вопросами:
+
+Как научить Вашу программу сворачиваться в трей;
+Как сделать контектсное меню для иконки трея Вашего приложения;
+Как отключать данную функцию, если в ней нет необходимости.
+Программный код был написан в QtCreator 3.3.1 на основе Qt 5.4.1.
+
+Структура проекта для QSystemTrayIcon
+Проект создается как Приложение Qt Widgets, в котором по умолчанию создаются файлы:
+
+Tray.pro - профайл;
+mainwindow.h - заголовочный файл основного окна приложения;
+mainwindow.cpp - исходный код окна;
+main.cpp - основной исходный файл, с которого стартует приложение;
+mainwindow.ui - формочка основного окна приложения.
+Примечание. Большую часть интерфейса создаю в дизайнере, чтобы не загромождать логику основного кода лишней информацией. По сути это лишь дело вкуса и привычки.
+
+mainwindow.ui
+
+Формочка окна для проверки трея
+Для теста создадим простую и ничем не примечательную формочку с чек-боксом.
+
+Название объекта QCheckBox следующее - trayCheckBox
+
+Tray.pro
+Данный файл оставляем с настройками по умолчанию.
+
+#-------------------------------------------------
+#
+# Project created by QtCreator 2015-08-10T17:18:30
+#
+#-------------------------------------------------
+ 
+QT       += core gui
+ 
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+ 
+TARGET = Tray
+TEMPLATE = app
+ 
+ 
+SOURCES += main.cpp\
+        mainwindow.cpp
+ 
+HEADERS  += mainwindow.h
+ 
+FORMS    += mainwindow.ui
+main.cpp
+Данный файл также не подвергается изменениям
+
+#include "mainwindow.h"
+#include <QApplication>
+ 
+int main(int argc, char *argv[])
+{
+    QApplication a(argc, argv);
+    MainWindow w;
+    w.show();
+ 
+    return a.exec();
+}
+mainwindow.h
+В заголовочном файле уже вносятся изменения, поскольку нам необходимо отслеживать событие закрытия окна, а также необходимо создать обработчик нажатий на иконку приложения в трее. Также в данном файле не забываем подключить все необходимые библиотеки. Иначе проект не скомпилируется.
+
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+ 
+#include <QMainWindow>
+#include <QCloseEvent>
+#include <QSystemTrayIcon>
+#include <QAction>
+ 
+namespace Ui {
+class MainWindow;
+}
+ 
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+ 
+public:
+    explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
+ 
+protected:
+    /* Виртуальная функция родительского класса в нашем классе
+     * переопределяется для изменения поведения приложения,
+     *  чтобы оно сворачивалось в трей, когда мы этого хотим
+     */
+    void closeEvent(QCloseEvent * event);
+ 
+private slots:
+    /* Слот, который будет принимать сигнал от события
+     * нажатия на иконку приложения в трее
+     */
+    void iconActivated(QSystemTrayIcon::ActivationReason reason);
+ 
+private:
+    Ui::MainWindow          * ui;
+    /* Объявляем объект будущей иконки приложения для трея */
+    QSystemTrayIcon         * trayIcon;
+};
+ 
+#endif // MAINWINDOW_H
+mainwindow.cpp
+Вся логика работы тестируемого приложения заложена в данном классе. Приложение будет сворачиваться в трей только в том случае, если галочкой отмечен чекбокс. Вместо чекбокса может выступать переменная или любой другой способ хранения информации о необходимости работы данной функции.
+
+
+иконка приложения в трее с контестным меню
+При этом, чтобы выйти из приложения при отмеченном чекбоксе, используется соответствующий пункт в контекстном меню.
+
+Также, когда приложение сворачивает в трей, то всплывает соответствующее сообщение, которое информирует пользователя о данном событии.
+
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+ 
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    this->setWindowTitle("Tray Program");
+ 
+    /* Инициализируем иконку трея, устанавливаем иконку из набора системных иконок,
+     * а также задаем всплывающую подсказку
+     * */
+    trayIcon = new QSystemTrayIcon(this);
+    trayIcon->setIcon(this->style()->standardIcon(QStyle::SP_ComputerIcon));
+    trayIcon->setToolTip("Tray Program" "\n"
+                         "Работа со сворачиванием программы трей");
+    /* После чего создаем контекстное меню из двух пунктов*/
+    QMenu * menu = new QMenu(this);
+    QAction * viewWindow = new QAction(trUtf8("Развернуть окно"), this);
+    QAction * quitAction = new QAction(trUtf8("Выход"), this);
+ 
+    /* подключаем сигналы нажатий на пункты меню к соответсвующим слотам.
+     * Первый пункт меню разворачивает приложение из трея,
+     * а второй пункт меню завершает приложение
+     * */
+    connect(viewWindow, SIGNAL(triggered()), this, SLOT(show()));
+    connect(quitAction, SIGNAL(triggered()), this, SLOT(close()));
+ 
+    menu->addAction(viewWindow);
+    menu->addAction(quitAction);
+ 
+    /* Устанавливаем контекстное меню на иконку
+     * и показываем иконку приложения в трее
+     * */
+    trayIcon->setContextMenu(menu);
+    trayIcon->show();
+ 
+    /* Также подключаем сигнал нажатия на иконку к обработчику
+     * данного нажатия
+     * */
+    connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+            this, SLOT(iconActivated(QSystemTrayIcon::ActivationReason)));
+}
+ 
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+ 
+/* Метод, который обрабатывает событие закрытия окна приложения
+ * */
+void MainWindow::closeEvent(QCloseEvent * event)
+{
+    /* Если окно видимо и чекбокс отмечен, то завершение приложения
+     * игнорируется, а окно просто скрывается, что сопровождается
+     * соответствующим всплывающим сообщением
+     */
+    if(this->isVisible() && ui->trayCheckBox->isChecked()){
+        event->ignore();
+        this->hide();
+        QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::MessageIcon(QSystemTrayIcon::Information);
+ 
+        trayIcon->showMessage("Tray Program",
+                              trUtf8("Приложение свернуто в трей. Для того чтобы, "
+                                     "развернуть окно приложения, щелкните по иконке приложения в трее"),
+                              icon,
+                              2000);
+    }
+}
+ 
+/* Метод, который обрабатывает нажатие на иконку приложения в трее
+ * */
+void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
+{
+    switch (reason){
+    case QSystemTrayIcon::Trigger:
+        /* Событие игнорируется в том случае, если чекбокс не отмечен
+         * */
+        if(ui->trayCheckBox->isChecked()){
+            /* иначе, если окно видимо, то оно скрывается,
+             * и наоборот, если скрыто, то разворачивается на экран
+             * */
+            if(!this->isVisible()){
+                this->show();
+            } else {
+                this->hide();
+            }
+        }
+        break;
+    default:
+        break;
+    }
+}
+Итог
+В случае успешной сборки проекта, Ваше приложение с легкостью свернётся в трей колачиком. Пример работы приложения с QSystemTrayIcon показан на следующем видео:
