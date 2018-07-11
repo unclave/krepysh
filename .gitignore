@@ -1,6 +1,3 @@
-build*
-*.pro.user
-
 # C++ objects and libs
 *.slo
 *.lo

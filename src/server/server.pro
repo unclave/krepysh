@@ -10,3 +10,6 @@ FORMS += \
 
 HEADERS += \
     server.h
+	
+RESOURCES += \
+    resource.qrc

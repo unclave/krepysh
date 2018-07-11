@@ -10,6 +10,10 @@
 #include <QDesktopWidget>
 #include <qmath.h>
 #include <QSystemTrayIcon>
+#include <QMenu>
+#include <QAction>
+#include <QDebug>
+//#include <QCoreApplication>
 
 
 Server::Server(QWidget *parent) :
@@ -18,7 +22,29 @@ Server::Server(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    setWindowTitle(QApplication::applicationName());
+
+    trayIcon = new QSystemTrayIcon(this);
+    trayIcon->setIcon(QIcon("://images/tray.png"));
+    trayIcon->setToolTip("Tray program");
+
+    QMenu *menu = new QMenu(this);
+    QAction *oneAction = new QAction(trUtf8("1"), this);
+    QAction *twoAction = new QAction(trUtf8("2"), this);
+    QAction *threeAction = new QAction(trUtf8("3"), this);
+    QAction *quitAction = new QAction(trUtf8("Выход"), this);
+
+    connect(oneAction, SIGNAL(triggered()), this, SLOT (onOneAction()));
+    connect(twoAction, SIGNAL(triggered()), this, SLOT (onTwoAction()));
+    connect(threeAction, SIGNAL(triggered()), this, SLOT(onThreeAction()));
+    connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
+
+    menu->addAction(oneAction);
+    menu->addAction(twoAction);
+    menu->addAction(threeAction);
+    menu->addAction(quitAction);
+
+    trayIcon->setContextMenu(menu);
+    trayIcon->show();
 }
 
 Server::~Server()
@@ -31,9 +57,6 @@ void Server::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         dragPosition_ = event->globalPos() - frameGeometry().topLeft();
         event->accept();
-    }
-    if (event->button() == Qt::RightButton) {
-        qApp->exit();
     }
 }
 
@@ -54,4 +77,19 @@ void Server::mouseMoveEvent(QMouseEvent *event)
 
         event->accept();
     }
+}
+
+void Server::onOneAction()
+{
+    qDebug() << Q_FUNC_INFO;
+}
+
+void Server::onTwoAction()
+{
+    qDebug() << Q_FUNC_INFO;
+}
+
+void Server::onThreeAction()
+{
+    qDebug() << Q_FUNC_INFO;
 }
