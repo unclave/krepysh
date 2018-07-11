@@ -1,0 +1,222 @@
+Вариант 1 - QSignalMapper и синтаксис на макросах
+Для начала разберём вариант, который предлагается в качестве примера в официальной документации. Когда сигналы и слоты подключаются с помощью макросов, то есть вариант, который совместим с Qt 4.8.
+
+Внешний вид приложения создавался в графическом дизайнере, поэтому не удивляйтесь использованию ui объекта.
+
+mainwindow.h
+Итак, чтобы приложение заработало, нам понадобится QSignalMapper и слот, в котором будет обрабатываться нажатие динамической кнопки. Нюанс в том, что в QLabel будет устанавливаться текст из этой самой кнопки, поэтому воспользуемся сигналом QSignalMapper::mapped(const QString &) , который будет  приниматься слотом MainWindow::clicked(const QString &), в данном слоте виджет будет преобразован в объект QPushButton, и мы заберём из него текст. Текст будет предварительно устанавливаться при создании данной кнопки. Для нумерации будет использоваться счётчик созданных кнопок (переменная int counter).
+
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+ 
+#include <QMainWindow>
+#include <QSignalMapper>
+ 
+namespace Ui {
+class MainWindow;
+}
+ 
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+ 
+public:
+    explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
+ 
+private slots:
+    void on_pushButton_clicked();           // Слот, в котором будут создаваться кнопки
+    void clicked(const QString &str);       // Слот, в котором будут обрабатываться клики кнопок
+ 
+private:
+    Ui::MainWindow *ui;
+    int counter;
+    QSignalMapper *mapper;                  // маппер, который будет обрабатываться сигналы от кнопок
+};
+ 
+#endif // MAINWINDOW_H
+mainwindow.cpp
+И рассмотрим, как всё это выглядит в коде.
+
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+ 
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow),
+    counter(0)
+{
+    ui->setupUi(this);
+ 
+    mapper = new QSignalMapper(this);   // Инициализируем маппер
+}
+ 
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+ 
+void MainWindow::on_pushButton_clicked()
+{
+    QPushButton *button = new QPushButton(this);            // Создаём кнопку
+    button->setText("Button " + QString::number(counter));  // Устанавливаем в неё текст
+    counter++;                                              // Инкрементируем счётчик
+    ui->verticalLayout->addWidget(button);                  // Помещаем кнопку в vertical layout
+ 
+    // подключаем сигнал клика кнопки к мапперу
+    connect(button, SIGNAL(clicked(bool)), mapper, SLOT(map()));
+    mapper->setMapping(button, button->text()); // по клику кнопки будем передавать текст из этой кнопки
+    // передаём текст с кнопки из маппера в слот, где будет установлен текст
+    connect(mapper, SIGNAL(mapped(QString)), this, SLOT(clicked(QString)));
+}
+ 
+void MainWindow::clicked(const QString &str)
+{
+    // конечно, у QLabel метод setText уже является слотом и
+    // можно было бы сразу его подключить к сигналу,
+    // но для обзора всех сложностей будет оптимальнее показать это отдельным слотом
+    ui->label->setText(str);
+}
+Вариант 2 - QSignalMapper и новый синтаксис
+В первом варианте код совместим с кодом на Qt 4.8 и в целом достаточно читабелен, но что если мы не собираемся поддерживать проект на версии 4.8? Тогда первое, что нужно сделать, это переписать данный код с использованием синтаксиса на указателях и сделать небольшие вкрапление лямбда функций. И тогда вы увидите, что я подразумевал, говоря, что QSignalMapper будет выглядеть как монструозный атавизм.
+
+mainwindow.h
+Теперь в заголовочном файле уже отсутствует слот для обработки нажатия динамической кнопки, поскольку уже здесь будут использоваться лямбды.
+
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+ 
+#include <QMainWindow>
+#include <QSignalMapper>
+ 
+namespace Ui {
+class MainWindow;
+}
+ 
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+ 
+public:
+    explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
+ 
+private slots:
+    void on_pushButton_clicked();           // Слот, в котором будут создаваться кнопки
+ 
+private:
+    Ui::MainWindow *ui;
+    int counter;
+    QSignalMapper *mapper;                  // маппер, который будет обрабатываться сигналы от кнопок
+};
+ 
+#endif // MAINWINDOW_H
+mainwindow.cpp
+Посмотрим, как теперь выглядит программный код. Казалось бы, получаем однозначный WIN:
+
+Убрали один слот, благодаря лямбда функции;
+Получили возможность отслеживать ошибки уже на этапе компиляции, а не в рантайме, чем грешат макросы сигналов и слотов;
+Привели код к стандарту Qt5.
+Но при этом код выглядит достаточно жутко, поскольку используется static_cast для сигналов и слотов QSignalMapper. Это связано с тем, что как слот map(), так и сигнал mapped() являются перегруженными и компилятору нужно указывать их сигнатуру. И ниже следующие конструкции лаконичности и красоты коду не придают. Но и эту ситуацию можно исправить - рассмотрим третий вариант.
+
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+ 
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow),
+    counter(0)
+{
+    ui->setupUi(this);
+ 
+    mapper = new QSignalMapper(this);   // Инициализируем маппер
+}
+ 
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+ 
+void MainWindow::on_pushButton_clicked()
+{
+    QPushButton *button = new QPushButton(this);            // Создаём кнопку
+    button->setText("Button " + QString::number(counter));  // Устанавливаем в неё текст
+    counter++;                                              // Инкрементируем счётчик
+    ui->verticalLayout->addWidget(button);                  // Помещаем кнопку в vertical layout
+ 
+    // подключаем сигнал клика кнопки к мапперу
+    connect(button, &QPushButton::clicked,
+            mapper, static_cast<void(QSignalMapper::*)()>(&QSignalMapper::map));
+    mapper->setMapping(button, button->text()); // по клику кнопки будем передавать текст из этой кнопки
+    // передаём текст с кнопки из маппера в слот, где будет установлен текст
+    connect(mapper, static_cast<void(QSignalMapper::*)(const QString &)>(&QSignalMapper::mapped),
+            [=](const QString str){
+        ui->label->setText(str);
+    });
+}
+Вариант 3 - избавляемся от QSignalMapper
+А теперь избавимся от QSignalMapper. Ведь если использовать все возможности лямбда функций, то для реализации таких задач, как в данном примере, QSignalMapper вовсе не нужен.
+
+mainwindow.h
+Код в заголовочном файле немного сократился, как видите.
+
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+ 
+#include <QMainWindow>
+ 
+namespace Ui {
+class MainWindow;
+}
+ 
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+ 
+public:
+    explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
+ 
+private slots:
+    void on_pushButton_clicked();           // Слот, в котором будут создаваться кнопки
+ 
+private:
+    Ui::MainWindow *ui;
+    int counter;
+};
+ 
+#endif // MAINWINDOW_H
+mainwindow.cpp
+И как можете видеть, использование лямбда функции значительно сокращает код, а также избавляет в данной ситуации от использования класса QSignalMapper вовсе. Вполне возможно, что данный класс благодаря развитию самого языка C++ отомрёт вовсе.
+
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+ 
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow),
+    counter(0)
+{
+    ui->setupUi(this);
+}
+ 
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+ 
+void MainWindow::on_pushButton_clicked()
+{
+    QPushButton *button = new QPushButton(this);            // Создаём кнопку
+    button->setText("Button " + QString::number(counter));  // Устанавливаем в неё текст
+    counter++;                                              // Инкрементируем счётчик
+    ui->verticalLayout->addWidget(button);                  // Помещаем кнопку в vertical layout
+ 
+    // В лямбде захватываем из внешней области переменных указатель на MainWindow,
+    // что позволит использовать переменные ui, а также саму кнопку button
+    connect(button, &QPushButton::clicked, [this, button](){
+        ui->label->setText(button->text());
+    });
+}
+Резюмируем ...
+Применение нового синтаксиса сигналов и слотов, позволяет подключить мощные возможности языка C++ и в применении к Qt вовсе избавиться от использования некоторых классов, польза которых была несомненной в устаревших версиях Qt. А также использование лямбд позволяет значительно сократить и упростить программный код.
