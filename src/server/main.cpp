@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-	
+
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {
         QMessageBox::critical(
                     0,
@@ -17,6 +17,6 @@ int main(int argc, char *argv[])
 
     Server server;
     server.show();
-	
+
     return a.exec();
 }

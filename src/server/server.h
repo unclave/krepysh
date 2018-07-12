@@ -11,6 +11,8 @@
 #include <QPixmap>
 #include <QBitmap>
 #include <QSystemTrayIcon>
+#include <QSignalMapper>
+#include <QMap>
 
 namespace Ui {
 class Server;
@@ -34,11 +36,15 @@ private:
     enum MovementDirection { toLeft, toRight };
     QPoint dragPosition_;
     MovementDirection direction_;
+    QSignalMapper *signalMapper_;
+    QMap<QString, int> fileMenuItems_;
+
+
 
 private slots:
-   void onOneAction();
-   void onTwoAction();
-   void onThreeAction();
+   void onMappedReceived(QObject *object);
+   //void clicked(const QString &str);
+   //void onPushButtonClicked();
 };
 
 

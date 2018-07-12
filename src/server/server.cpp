@@ -13,6 +13,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QDebug>
+#include <QVariant>
 //#include <QCoreApplication>
 
 
@@ -22,28 +23,41 @@ Server::Server(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    //fileMenu
+    fileMenuItems_["Open"] = 0;
+    fileMenuItems_["Save"] = 1;
+    fileMenuItems_["Close"] = 2;
+
 
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->setIcon(QIcon("://images/tray.png"));
     trayIcon->setToolTip("Tray program");
 
-    QMenu *menu = new QMenu(this);
-    QAction *oneAction = new QAction(trUtf8("1"), this);
-    QAction *twoAction = new QAction(trUtf8("2"), this);
-    QAction *threeAction = new QAction(trUtf8("3"), this);
-    QAction *quitAction = new QAction(trUtf8("Выход"), this);
+    QList<QAction *> fileMenuActions;
+    QMap <QString, int>::const_iterator i = fileMenuItems_.constBegin();
+    while(i != fileMenuItems_.constEnd()) {
+        QAction *act = new QAction(i.key(), this);
+        act->setData(QVariant(i.value()));
+        fileMenuActions << act;
+        ++i;
+    }
 
-    connect(oneAction, SIGNAL(triggered()), this, SLOT (onOneAction()));
-    connect(twoAction, SIGNAL(triggered()), this, SLOT (onTwoAction()));
-    connect(threeAction, SIGNAL(triggered()), this, SLOT(onThreeAction()));
-    connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
+    QMenu *fileMenu = new QMenu ("File", this);
+    fileMenu->addActions(fileMenuActions);
 
-    menu->addAction(oneAction);
-    menu->addAction(twoAction);
-    menu->addAction(threeAction);
-    menu->addAction(quitAction);
+    signalMapper_ = new QSignalMapper(this);
 
-    trayIcon->setContextMenu(menu);
+    Q_FOREACH(QAction *action, fileMenuActions) {
+        connect (action, SIGNAL(triggered()), signalMapper_, SLOT(map()));
+        signalMapper_->setMapping(action, action);
+    }
+
+    connect(signalMapper_,
+            SIGNAL(mapped(QObject *)), this,
+            SLOT(onMappedReceived(Qobject*)));
+
+    trayIcon->setContextMenu(fileMenu);
+    trayIcon->show();
     trayIcon->show();
 }
 
@@ -79,17 +93,16 @@ void Server::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
-void Server::onOneAction()
+void Server::onMappedReceived(QObject *object)
 {
-    qDebug() << Q_FUNC_INFO;
+    //int value;
+    //value << static_cast<QAction *>(object)->data().toInt();
+    //if (value == static_cast<QAction *>(object)->data().toInt())
+    //{
+      //  qDebug() << "Close";
+    //}
+    qDebug() << static_cast<QAction *>(object)->data().toInt();
 }
 
-void Server::onTwoAction()
-{
-    qDebug() << Q_FUNC_INFO;
-}
+    //qDebug() << Q_FUNC_INFO;
 
-void Server::onThreeAction()
-{
-    qDebug() << Q_FUNC_INFO;
-}
