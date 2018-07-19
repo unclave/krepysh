@@ -38,7 +38,10 @@ private:
     MovementDirection direction_;
     QSignalMapper *signalMapper_;
     QMap<QString, int> fileMenuItems_;
-
+    void sharedMemory();
+    void readSettings(const QString &filename);
+    int x_;
+    int y_;
 
 
 private slots:

@@ -16,6 +16,7 @@
 #include <QVariant>
 #include <stdlib.h>
 #include <QCoreApplication>
+#include <QSharedMemory>
 
 
 Server::Server(QWidget *parent) :
@@ -24,6 +25,13 @@ Server::Server(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+
+    const QString fileName = QString("%1/%2.conf")
+            .arg(QApplication::applicationDirPath())
+            .arg(QApplication::applicationName());
+
+    readSettings(fileName);
+
     //fileMenu
     fileMenuItems_["Open"] = 0;
     fileMenuItems_["Save"] = 1;
@@ -60,6 +68,7 @@ Server::Server(QWidget *parent) :
     trayIcon->setContextMenu(fileMenu);
     trayIcon->show();
     trayIcon->show();
+    //TODO SHOW
 }
 
 Server::~Server()
@@ -110,6 +119,31 @@ void Server::onMappedReceived(QObject *object)
     {
         qApp->exit();
     }
-   //qDebug() << static_cast<QAction *>(object)->data().toInt();
 }
 
+
+void Server::readSettings(const QString &filename)
+{
+    QSettings settings(filename, QSettings::IniFormat);
+    x_ = settings.value("Window/x_", 150).toInt();
+    y_ = settings.value("Window/y_", 150).toInt();
+}
+
+
+void Server::sharedMemory()
+{
+    QSharedMemory mem;
+    mem.setKey("MyKey");
+    if (!mem.create(1024)) // занимаем 1024 байта памяти
+    {
+    //...... // если не удалось
+    }
+    char *data = (char*)mem.data(); // указатель на общую память
+    if (mem.lock()) // это приложение начинает работу с общей памятью
+    {
+      QByteArray ar = "Hello\0";
+      for (int i=0;i<ar.size();i++) // записываем данные в общую память
+        data[i] = ar[i];
+      mem.unlock(); // заканчиваем работу с общей памятью
+    }
+}

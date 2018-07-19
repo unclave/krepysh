@@ -13,3 +13,6 @@ HEADERS += \
 	
 RESOURCES += \
     resource.qrc
+
+OTHER_FILES += \
+    server.conf
