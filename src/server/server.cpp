@@ -14,7 +14,8 @@
 #include <QAction>
 #include <QDebug>
 #include <QVariant>
-//#include <QCoreApplication>
+#include <stdlib.h>
+#include <QCoreApplication>
 
 
 Server::Server(QWidget *parent) :
@@ -27,7 +28,6 @@ Server::Server(QWidget *parent) :
     fileMenuItems_["Open"] = 0;
     fileMenuItems_["Save"] = 1;
     fileMenuItems_["Close"] = 2;
-
 
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->setIcon(QIcon("://images/tray.png"));
@@ -54,7 +54,8 @@ Server::Server(QWidget *parent) :
 
     connect(signalMapper_,
             SIGNAL(mapped(QObject *)), this,
-            SLOT(onMappedReceived(Qobject*)));
+            SLOT(onMappedReceived(QObject*)));
+
 
     trayIcon->setContextMenu(fileMenu);
     trayIcon->show();
@@ -95,14 +96,20 @@ void Server::mouseMoveEvent(QMouseEvent *event)
 
 void Server::onMappedReceived(QObject *object)
 {
-    //int value;
-    //value << static_cast<QAction *>(object)->data().toInt();
-    //if (value == static_cast<QAction *>(object)->data().toInt())
-    //{
-      //  qDebug() << "Close";
-    //}
-    qDebug() << static_cast<QAction *>(object)->data().toInt();
+    int value;
+    value = static_cast<QAction *>(object)->data().toInt();
+    if (value == fileMenuItems_.value("Save"))
+    {
+        qDebug() << "Save";
+    }
+    if (value == fileMenuItems_.value("Open"))
+    {
+        qDebug() << "Open";
+    }
+    if (value == fileMenuItems_.value("Close"))
+    {
+        qApp->exit();
+    }
+   //qDebug() << static_cast<QAction *>(object)->data().toInt();
 }
-
-    //qDebug() << Q_FUNC_INFO;
 
