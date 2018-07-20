@@ -33,21 +33,22 @@ protected:
 private:
     Ui::Server *ui;
     QSystemTrayIcon *trayIcon;
+
     enum MovementDirection { toLeft, toRight };
     QPoint dragPosition_;
     MovementDirection direction_;
+
     QSignalMapper *signalMapper_;
     QMap<QString, int> fileMenuItems_;
+
     void sharedMemory();
-    void readSettings(const QString &filename);
+    //void readSettings(const QString &filename);
     int x_;
     int y_;
 
 
 private slots:
    void onMappedReceived(QObject *object);
-   //void clicked(const QString &str);
-   //void onPushButtonClicked();
 };
 
 
